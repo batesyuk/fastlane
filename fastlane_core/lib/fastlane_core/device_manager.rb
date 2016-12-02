@@ -208,7 +208,7 @@ module FastlaneCore
 
         UI.verbose "Launching #{simulator_path} for device: #{device.name} (#{device.udid})"
 
-        Helper.backticks("open -a #{simulator_path} --args -CurrentDeviceUDID #{device.udid}", print: $verbose)
+        Helper.backticks("open -a #{simulator_path} --args -CurrentDeviceUDID #{device.udid}", print: FastlaneCore::Globals.verbose?)
       end
     end
   end

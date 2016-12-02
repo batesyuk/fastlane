@@ -30,7 +30,7 @@ module Snapshot
 
         output_path = File.join(language_folder, components.join("-") + ".png")
         from_path = File.join(attachments_path, filename)
-        if $verbose
+        if FastlaneCore::Globals.verbose?
           UI.success "Copying file '#{from_path}' to '#{output_path}'..."
         else
           UI.success "Copying '#{output_path}'..."

@@ -10,15 +10,15 @@ module Fastlane
     def self.start
       # since at this point we haven't yet loaded commander
       # however we do want to log verbose information in the PluginManager
-      $verbose = true if ARGV.include?("--verbose")
-      $capture_output = true if ARGV.include?("--capture_output")
+      FastlaneCore::Globals.verbose(true) if ARGV.include?("--verbose")
+      FastlaneCore::Globals.capture_output(true)  if ARGV.include?("--capture_output")
 
       # has to be checked here - in case we wan't to troubleshoot plugin related issues
       if ARGV.include?("--troubleshoot")
         self.confirm_troubleshoot
       end
 
-      if $capture_output
+      if FastlaneCore::Globals.capture_output?
         # Trace mode is enabled
         # redirect STDOUT and STDERR
         out_channel = StringIO.new
@@ -37,8 +37,8 @@ module Fastlane
     ensure
       FastlaneCore::UpdateChecker.show_update_status('fastlane', Fastlane::VERSION)
       Fastlane::PluginUpdateManager.show_update_status
-      if $capture_output
-        $captured_output = Helper.strip_ansi_colors($stdout.string)
+      if FastlaneCore::Globals.capture_output?
+        FastlaneCore::Globals.captured_output = Helper.strip_ansi_colors($stdout.string)
         $stdout = STDOUT
         $stderr = STDERR
 
@@ -79,7 +79,7 @@ module Fastlane
       program :help, 'GitHub', 'https://github.com/fastlane/fastlane'
       program :help_formatter, :compact
 
-      global_option('--verbose') { $verbose = true }
+      global_option('--verbose') { FastlaneCore::Globals.verbose(true) }
       global_option('--capture_output', 'Captures the output of the current run, and generates a markdown issue template') { $capture_output = true }
       global_option('--troubleshoot', 'Enables extended verbose mode. Use with caution, as this even includes ALL sensitive data. Cannot be used on CI.')
 

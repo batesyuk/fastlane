@@ -21,7 +21,7 @@ module Snapshot
       program :help, 'GitHub', 'https://github.com/fastlane/snapshot'
       program :help_formatter, :compact
 
-      global_option('--verbose', 'Shows a more verbose output') { $verbose = true }
+      global_option('--verbose', 'Shows a more verbose output') { FastlaneCore::Globals.verbose(true) }
 
       always_trace!
 

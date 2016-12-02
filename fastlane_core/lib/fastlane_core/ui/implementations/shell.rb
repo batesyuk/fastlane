@@ -14,7 +14,7 @@ module FastlaneCore
       end
 
       @log.formatter = proc do |severity, datetime, progname, msg|
-        if $verbose
+        if FastlaneCore::Globals.verbose?
           string = "#{severity} [#{datetime.strftime('%Y-%m-%d %H:%M:%S.%2N')}]: "
         elsif ENV["FASTLANE_HIDE_TIMESTAMP"]
           string = ""
@@ -67,7 +67,7 @@ module FastlaneCore
     end
 
     def verbose(message)
-      log.debug(message.to_s) if $verbose
+      log.debug(message.to_s) if FastlaneCore::Globals.verbose?
     end
 
     def header(message)

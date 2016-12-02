@@ -44,7 +44,7 @@ module CredentialsManager
           eval(content)
           # rubocop:enable Lint/Eval
 
-          print_debug_information(path: full_path) if $verbose
+          print_debug_information(path: full_path) if FastlaneCore::Globals.verbose?
         end
       end
 
