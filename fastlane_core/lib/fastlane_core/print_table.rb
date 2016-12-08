@@ -30,13 +30,20 @@ module FastlaneCore
 
       def limit_row_size(rows, max_length = 100)
         require 'fastlane_core/string_filters'
+        require 'io/console'
+
+        tcols = IO.console.winsize[1]
+        max_length = tcols
 
         max_key_length = rows.map { |e| e[0].length }.max || 0
-        max_allowed_value_length = max_length - max_key_length - 7
+        if max_key_length > (tcols / 2) - 6
+          max_key_length = (tcols / 2) - 6
+        end
+        max_allowed_value_length = max_length - max_key_length - 12
         rows.map do |e|
           value = e[1]
-          value = value.to_s.truncate(max_allowed_value_length) unless [true, false].include?(value)
-          [e[0], value]
+          value = value.to_s.middle_truncate(max_allowed_value_length) unless [true, false].include?(value)
+          [e[0].to_s.middle_truncate(max_key_length), value]
         end
       end
 
