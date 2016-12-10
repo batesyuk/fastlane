@@ -59,6 +59,8 @@ module Fastlane
 
     def initialize(filename)
       @ast = parse(filename)
+    rescue => ex
+      return nil
     end
 
     def parse_it
@@ -78,7 +80,11 @@ module Fastlane
     private
 
     def parse(data)
+    begin
       Parser::CurrentRuby.parse(data)
+    rescue => ex
+      return nil
+    end
     end
 
     # from runner.rb -> should be in FastlaneCore or somewhere shared
@@ -93,6 +99,10 @@ module Fastlane
 
     def recursive_find_actions(ast)
       collected = []
+      if ast.nil?
+        UI.error("Parse error")
+        return nil
+      end
       ast.children.each do |child|
         next unless child.class.to_s == "Parser::AST::Node"
 

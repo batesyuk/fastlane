@@ -91,6 +91,7 @@ module Fastlane
           if File.exist?(args.first)
             fp = FastfileParser.new(File.read(args.first))
             b = fp.parse_it
+            return if b[:actions].nil?
             # UI.message("Found actions:".yellow)
             error_found = false
             b[:actions].each do |a|
