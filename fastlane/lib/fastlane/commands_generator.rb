@@ -85,6 +85,31 @@ module Fastlane
 
       always_trace!
 
+      command "validate-fastfile" do |c|
+        c.syntax = 'fastlane validate-fastfile /path/to/Fastfile'
+        c.action do |args, options|
+          if File.exist?(args.first)
+            fp = FastfileParser.new(File.read(args.first))
+            b = fp.parse_it
+            # UI.message("Found actions:".yellow)
+            error_found = false
+            b[:actions].each do |a|
+              status = ""
+              next unless a[:result]
+              next unless a[:result][:error]
+              status = a[:result][:error]
+              UI.message(" * #{a[:line]}:#{a[:action]} - #{status}".red)
+              error_found = true
+            end
+
+          else
+            raise "File not found"
+          end
+          unless error_found
+            UI.success("File succesfully validated")
+          end
+        end
+      end
       command :trigger do |c|
         c.syntax = 'fastlane [lane]'
         c.description = 'Run a specific lane. Pass the lane name and optionally the platform first.'
