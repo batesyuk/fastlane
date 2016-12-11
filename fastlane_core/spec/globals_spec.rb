@@ -2,7 +2,6 @@ require 'spec_helper'
 
 describe FastlaneCore do
   describe FastlaneCore::Globals do
-    
     it "Toggle verbose mode" do
       FastlaneCore::Globals.verbose = true
       expect(FastlaneCore::Globals.verbose?).to eq(true)
@@ -16,6 +15,5 @@ describe FastlaneCore do
       FastlaneCore::Globals.capture_output = false
       expect(FastlaneCore::Globals.capture_output?).to eq(false)
     end
-
   end
 end
