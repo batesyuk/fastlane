@@ -18,7 +18,7 @@ module FastlaneCore
     end
     
     def self.captured_output?
-      if @captured_output.length > 0
+      if @capture_output &&  @captured_output.length > 0
         return true
       end
       return false
