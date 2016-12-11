@@ -49,7 +49,7 @@ module Pilot
       program :help, "GitHub", "https://github.com/fastlane/fastlane/tree/master/pilot"
       program :help_formatter, :compact
 
-      global_option("--verbose") { FastlaneCore::Globals.verbose(true) }
+      global_option("--verbose") { FastlaneCore::Globals.verbose = true }
 
       command :upload do |c|
         c.syntax = "pilot upload"

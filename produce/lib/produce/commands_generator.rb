@@ -21,7 +21,7 @@ module Produce
       program :help, 'GitHub', 'https://github.com/fastlane/produce'
       program :help_formatter, :compact
 
-      global_option('--verbose') { FastlaneCore::Globals.verbose(true) }
+      global_option('--verbose') { FastlaneCore::Globals.verbose = true }
 
       FastlaneCore::CommanderGenerator.new.generate(Produce::Options.available_options)
 

@@ -6,27 +6,24 @@ module FastlaneCore
       end
       @captured_output
     end
-    def self.captured_output=(str)
-      @captured_output=str
+
+    class << self
+      attr_writer :captured_output
+      attr_writer :capture_output
+      attr_writer :verbose
     end
+
     def self.capture_output?
       return @capture_output
     end
-    
-    def self.capture_output(flag)
-      @capture_output = flag
-    end
-    
+
     def self.captured_output?
-      if @capture_output &&  @captured_output.length > 0
+      if @capture_output && @captured_output.length > 0
         return true
       end
       return false
     end
-    def self.verbose(flag)
-        @verbose = flag
-        # $verbose = flag  - after review add this as a backward shim, but it may interfer tests
-    end
+
     def self.verbose?
       return @verbose
     end

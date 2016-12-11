@@ -21,7 +21,7 @@ module Sigh
       program :help, 'GitHub', 'https://github.com/fastlane/sigh'
       program :help_formatter, :compact
 
-      global_option('--verbose') { FastlaneCore::Globals.verbose(true) }
+      global_option('--verbose') { FastlaneCore::Globals.verbose = true }
 
       FastlaneCore::CommanderGenerator.new.generate(Sigh::Options.available_options)
 

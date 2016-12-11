@@ -38,10 +38,10 @@ end
 
 def with_verbose(verbose)
   orig_verbose = FastlaneCore::Globals.verbose?
-  FastlaneCore::Globals.verbose(verbose)
+  FastlaneCore::Globals.verbose = verbose
   yield if block_given?
 ensure
-  FastlaneCore::Globals.verbose(orig_verbose)
+  FastlaneCore::Globals.verbose = orig_verbose
 end
 
 def stub_plugin_exists_on_rubygems(plugin_name, exists)
