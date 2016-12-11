@@ -77,11 +77,11 @@ describe FastlaneCore do
     end
 
     it "breaks down long lines" do
-      long_breakable_text = 'bar ' * 40
+      long_breakable_text = 'bar ' * 4000
       @config[:cert_name] = long_breakable_text
       value = FastlaneCore::PrintTable.print_values(config: @config, hide_keys: [:output, :a_bool])
       expect(value[:rows].count).to eq(1)
-      expect(value[:rows][0][1]).to end_with '...'
+      expect(value[:rows][0][1]).to include '...'
       expect(value[:rows][0][1].length).to be < long_breakable_text.length
     end
 
