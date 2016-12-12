@@ -4,7 +4,7 @@ module FastlaneCore
       # This method prints out all the user inputs in a nice table. Useful to summarize the run
       # You can pass an array to `hide_keys` if you don't want certain elements to show up (symbols or strings)
       # You can pass an array to `mask_keys` if you want to mask certain elements (symbols or strings)
-      def print_values(config: nil, title: nil, hide_keys: [], mask_keys: [])
+      def print_values(config: nil, title: nil, hide_keys: [], mask_keys: [], truncate: true)
         require 'terminal-table'
 
         options = {}
@@ -18,7 +18,8 @@ module FastlaneCore
         rows = self.collect_rows(options: options, hide_keys: hide_keys.map(&:to_s), mask_keys: mask_keys.map(&:to_s), prefix: '')
 
         params = {}
-        params[:rows] = limit_row_size(rows)
+        truncate = false if Helper.is_ci? || FastlaneCore::Env.truthy?("DO_NOT_TRUNCATE_TABLES")
+        params[:rows] = limit_row_size(rows, truncate) unless truncate
         params[:title] = title.green if title
 
         puts ""
