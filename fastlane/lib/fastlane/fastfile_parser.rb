@@ -1,6 +1,7 @@
 require 'parser'
 require 'parser/current'
 require 'pp'
+require "terminal-table"
 module Fastlane
   class FastfileParser
     attr_accessor :original_action
@@ -9,7 +10,16 @@ module Fastlane
       "REMOVE_IT"
     end
 
+    def lines
+      @lines ||= []
+    end
+
     def fake_action(*args)
+      # Suppress UI output
+      out_channel = StringIO.new
+      $stdout = out_channel
+      $stderr = out_channel
+
       return_data = { args: args.first }
       return return_data if args.length <= 0
       return return_data if @original_action.nil?
@@ -27,16 +37,26 @@ module Fastlane
         return_data[:configuration] = config
       rescue => ex
         return_data[:error] = ex.message
+        lines << { state: :error, line: @line_number, msg: "'#{@original_action}'  failed with:  `#{ex.message}`" }
       end
 
       options_avail.each do |o|
-        next return_data unless o.sensitive
-        self.class.secrets << args.first[o.key.to_sym].to_s if args.first[o.key.to_sym] && !self.class.secrets.include?(args.first[o.key.to_sym].to_s)
-        UI.important("AX - #{@original_action.to_sym}: #{@action_vars.inspect}") if $verbose
-        @action_vars.each do |e|
-          self.class.secrets << e unless self.class.secrets.include?(e)
+        if o.sensitive
+          self.class.secrets << args.first[o.key.to_sym].to_s if args.first[o.key.to_sym] && !self.class.secrets.include?(args.first[o.key.to_sym].to_s)
+          UI.important("AX - #{@original_action.to_sym}: #{@action_vars.inspect}") if $verbose
+          @action_vars.each do |e|
+            self.class.secrets << e unless self.class.secrets.include?(e)
+          end
         end
+        if o.deprecated
+          lines << { state: :deprecated, line: @line_number, msg: "Use of deprecated option - '#{o.key}' - `#{o.deprecated}`" }
+        end
+
+        # reenabled output
+        $stdout = STDOUT
+        $stderr = STDERR
       end
+
       return_data
     end
 
@@ -63,8 +83,50 @@ module Fastlane
       return nil
     end
 
-    def parse_it
+    def analyze
       actions = find_actions
+      # lanes = find_lanes
+      return make_table
+    end
+
+    def wrap_string(s, max)
+      chars = []
+      dist = 0
+      s.chars.each do |c|
+        chars << c
+        dist += 1
+        if c == "\n"
+          dist = 0
+        elsif dist == max
+          dist = 0
+          chars << "\n"
+        end
+      end
+      chars = chars[0..-2] if chars.last == "\n"
+      chars.join
+    end
+
+    def make_table
+      #
+      table_rows = []
+      lines.each do |l|
+        status = l[:msg].yellow
+        linenr = l[:line].to_s.yellow
+        level = l[:state].to_s.yellow
+        emoji = "⚠️"
+        if l[:state] == :error
+          status = l[:msg].red
+          level = l[:state].to_s.red
+          linenr = l[:line].to_s.red
+          emoji = "❌"
+        end
+        table_rows << [level, linenr, wrap_string(status, 100)]
+      end
+      if table_rows.length <= 0
+        return nil
+      end
+      table = Terminal::Table.new title: "Fastfile Validation Result".green, headings: ["State", "Line#", "Notice"], rows: table_rows
+      return table
     end
 
     def find_actions
@@ -80,11 +142,9 @@ module Fastlane
     private
 
     def parse(data)
-    begin
       Parser::CurrentRuby.parse(data)
     rescue => ex
       return nil
-    end
     end
 
     # from runner.rb -> should be in FastlaneCore or somewhere shared
