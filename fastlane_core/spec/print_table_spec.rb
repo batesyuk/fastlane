@@ -77,6 +77,8 @@ describe FastlaneCore do
     end
 
     it "breaks down long lines" do
+      allow(FastlaneCore::Helper).to receive(:ci?).and_return(false)
+      allow(FastlaneCore::Helper).to receive(:is_ci?).and_return(false)
       long_breakable_text = 'bar ' * 4000
       @config[:cert_name] = long_breakable_text
       value = FastlaneCore::PrintTable.print_values(config: @config, hide_keys: [:output, :a_bool])
