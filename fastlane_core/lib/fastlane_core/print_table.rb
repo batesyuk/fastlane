@@ -19,7 +19,9 @@ module FastlaneCore
 
         params = {}
         truncate = false if Helper.is_ci? || FastlaneCore::Env.truthy?("DO_NOT_TRUNCATE_TABLES")
-        params[:rows] = limit_row_size(rows, truncate) unless truncate
+        params[:rows] = rows unless truncate
+        params[:rows] = limit_row_size(rows, truncate) if truncate
+
         params[:title] = title.green if title
 
         puts ""
@@ -37,8 +39,8 @@ module FastlaneCore
         max_length = tcols
 
         max_key_length = rows.map { |e| e[0].length }.max || 0
-        if max_key_length > (tcols / 2) - 6
-          max_key_length = (tcols / 2) - 6
+        if max_key_length > (max_length / 2) - 6
+          max_key_length = (max_length / 2) - 6
         end
         max_allowed_value_length = max_length - max_key_length - 12
         rows.map do |e|
