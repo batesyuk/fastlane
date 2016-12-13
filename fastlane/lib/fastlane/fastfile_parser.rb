@@ -79,7 +79,7 @@ module Fastlane
             self.class.secrets << e unless self.class.secrets.include?(e)
           end
         end
-        if o.deprecated
+        if o.deprecated && args.first[o.key.to_sym]
           lines << { state: :deprecated, line: @line_number, msg: "Use of deprecated option - '#{o.key}' - `#{o.deprecated}`" }
         end
 
