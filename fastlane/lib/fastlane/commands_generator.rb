@@ -92,13 +92,15 @@ module Fastlane
             fl_parser = FastfileParser.new(File.read(args.first))
             table = fl_parser.analyze
             puts table
-            
-            error_found = false
+            counters = fl_parser.counters
           else
             raise "File not found"
           end
-          unless error_found
-            UI.success("File succesfully validated")
+
+          if counters[:all] == 0
+            puts "File succesfully validated".green
+          else
+            puts "Found: Errors/Deprecations/Info: #{counters[:errors].to_s.red}/#{counters[:deprecations].to_s.yellow}/#{counters[:infos].to_s.blue}"
           end
         end
       end

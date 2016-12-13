@@ -14,6 +14,29 @@ module Fastlane
       @lines ||= []
     end
 
+    def lanes
+      @lanes ||= []
+    end
+
+    def actions
+      @actions ||= []
+    end
+
+    def counters
+      errors = lines.select { |key| key[:state] == :error }.length
+      deprecations = lines.select { |key| key[:state] == :deprecated }.length
+      infos = lines.select { |key| key[:state] == :infos }.length
+      { errors: errors, deprecations: deprecations, infos: infos, all: errors + infos + deprecations }
+    end
+
+    def data
+      { lanes: @lanes,  notices: @lines, actions: @actions }
+    end
+
+    def bad_options
+      [:use_legacy_build_api]
+    end
+
     def fake_action(*args)
       # Suppress UI output
       out_channel = StringIO.new
@@ -40,6 +63,14 @@ module Fastlane
         lines << { state: :error, line: @line_number, msg: "'#{@original_action}'  failed with:  `#{ex.message}`" }
       end
 
+      # get bad options
+      bad_options.each do |b|
+        if args.first[b.to_sym]
+          lines << { state: :error, line: @line_number, msg: "do not use this option '#{b.to_sym}'" }
+        end
+      end
+
+      # get deprecated and sensitive's
       options_avail.each do |o|
         if o.sensitive
           self.class.secrets << args.first[o.key.to_sym].to_s if args.first[o.key.to_sym] && !self.class.secrets.include?(args.first[o.key.to_sym].to_s)
@@ -79,13 +110,12 @@ module Fastlane
 
     def initialize(filename)
       @ast = parse(filename)
-    rescue => ex
+    rescue
       return nil
     end
 
     def analyze
-      actions = find_actions
-      # lanes = find_lanes
+      recursive_analyze(@ast)
       return make_table
     end
 
@@ -120,18 +150,16 @@ module Fastlane
           linenr = l[:line].to_s.red
           emoji = "❌"
         end
-        table_rows << [level, linenr, wrap_string(status, 100)]
+        if l[:state] == :info
+          emoji = "ℹ️"
+        end
+        table_rows << [emoji, level, linenr, wrap_string(status, 200)]
       end
       if table_rows.length <= 0
         return nil
       end
-      table = Terminal::Table.new title: "Fastfile Validation Result".green, headings: ["State", "Line#", "Notice"], rows: table_rows
+      table = Terminal::Table.new title: "Fastfile Validation Result".green, headings: ["#", "State", "Line#", "Notice"], rows: table_rows
       return table
-    end
-
-    def find_actions
-      actions = recursive_find_actions(@ast)
-      { actions: actions }
     end
 
     def find(method_name)
@@ -143,7 +171,7 @@ module Fastlane
 
     def parse(data)
       Parser::CurrentRuby.parse(data)
-    rescue => ex
+    rescue
       return nil
     end
 
@@ -157,8 +185,7 @@ module Fastlane
       nil
     end
 
-    def recursive_find_actions(ast)
-      collected = []
+    def recursive_analyze(ast)
       if ast.nil?
         UI.error("Parse error")
         return nil
@@ -166,9 +193,17 @@ module Fastlane
       ast.children.each do |child|
         next unless child.class.to_s == "Parser::AST::Node"
 
+        if (child.type.to_s == "send") and (child.children[0].to_s == "" && child.children[1].to_s == "lane")
+          @line_number = child.loc.expression.line
+          lane_name = child.children[2].children.first
+          lanes << lane_name
+          if Fastlane::Actions.action_class_ref(lane_name)
+            lines << { state: :error, line: @line_number, msg: "Name of the lane `#{lane_name}` already taken by action `#{lane_name}`" }
+          end
+        end
         if (child.type.to_s == "send") and (child.children[0].to_s == "" && (Fastlane::Actions.action_class_ref(child.children[1].to_s) || find_alias(child.children[1].to_s)))
           src_code = child.loc.expression.source
-          src_code.gsub!(child.children[1].to_s, "fake_action")
+          src_code.sub!(child.children[1].to_s, "fake_action")
           @line_number =  child.loc.expression.line
 
           # matches = src_code.gsub!(/#\{.*\}/) do |sym|
@@ -189,17 +224,16 @@ module Fastlane
           '
           UI.important(src_code) if $verbose
           begin
-            result = eval(dropper + src_code)
+            result = eval(dropper + src_code) # rubocop:disable Lint/Eval
           rescue => ex
             UI.important("PARSE ERROR") if $verbose
             UI.important("Exception: #{ex}") if $verbose
           end
-          collected << { action: @original_action, result: result, line: @line_number }
+          actions << { action: @original_action, result: result, line: @line_number }
         else
-          collected += recursive_find_actions(child)
+          recursive_analyze(child)
         end
       end
-      return collected
-      end
+    end
   end
 end
