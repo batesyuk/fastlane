@@ -37,6 +37,16 @@ module Fastlane
       [:use_legacy_build_api]
     end
 
+    def redacted
+      rc = ""
+      rc = @content
+      self.class.secrets.each do |s|
+        rc.gsub!(s, "#" * s.length)
+      end
+      pp self.class.secrets
+      rc
+    end
+
     # rubocop:disable PerceivedComplexity
     def fake_action(*args)
       # Suppress UI output
@@ -63,8 +73,16 @@ module Fastlane
         actions_path = File.join(path, 'actions')
         Fastlane::Actions.load_external_actions(actions_path) if File.directory?(actions_path)
 
-        fl_parser = FastfileParser.new(content: File.read("#{path}/fastlane/Fastfile"), filepath: @dirname, name: "Imported at #{@line_number}", change_dir: false, platforms: @platforms)
+        icontent = File.read("#{path}/fastlane/Fastfile")
+        fl_parser = FastfileParser.new(content: icontent, filepath: @dirname, name: "Imported at #{@line_number}", change_dir: false, platforms: @platforms)
         fl_parser.analyze
+        @content << "#########################################\n"
+        @content << "# BEGIN import_from_git at: #{@line_number} BEGIN\n"
+        @content << "#########################################\n"
+        @content << icontent
+        @content << "#########################################\n"
+        @content << "# END import_from_git at: #{@line_number} END\n"
+        @content << "#########################################\n"
         # lines.merge!(fl_parser.lines)
         fl_parser.lines.each do |l|
           lines << l
@@ -152,7 +170,7 @@ module Fastlane
       @filename = name
       @platforms = platforms
       @change_dir = change_dir
-
+      @content = content
       @dirname = File.dirname(filepath)
       # find the path above the "fastlane/"
       if @dirname == "fastlane"

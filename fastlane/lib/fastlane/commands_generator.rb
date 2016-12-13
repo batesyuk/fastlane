@@ -97,6 +97,9 @@ module Fastlane
             table = fl_parser.analyze
             puts table
             counters = fl_parser.counters
+
+            puts fl_parser.redacted
+
           else
             raise "File not found"
           end
