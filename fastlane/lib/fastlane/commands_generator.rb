@@ -87,9 +87,13 @@ module Fastlane
 
       command "validate-fastfile" do |c|
         c.syntax = 'fastlane validate-fastfile /path/to/Fastfile'
+        c.option '--platforms STRING', String, 'Comma seperated list of platforms (ios, mac, android) of actions to validate (others will be skipped)'
         c.action do |args, options|
           if File.exist?(args.first)
-            fl_parser = FastfileParser.new(File.read(args.first))
+
+            plat = []
+            plat = options.platforms.split(",") if options.platforms
+            fl_parser = FastfileParser.new(content: File.read(args.first), filepath: args.first, name: "Fastfile", platforms: plat)
             table = fl_parser.analyze
             puts table
             counters = fl_parser.counters

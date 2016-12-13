@@ -37,11 +37,9 @@ module Fastlane
       [:use_legacy_build_api]
     end
 
+    # rubocop:disable PerceivedComplexity
     def fake_action(*args)
       # Suppress UI output
-      out_channel = StringIO.new
-      $stdout = out_channel
-      $stderr = out_channel
 
       return_data = { args: args.first }
       return return_data if args.length <= 0
@@ -51,16 +49,52 @@ module Fastlane
       a = Fastlane::Actions.action_class_ref(@original_action.to_sym)
       a = find_alias(@original_action.to_sym) unless a
       return return_data unless a
+
+      # Get the importet file
+      out_channel = StringIO.new
+      $stdout = out_channel
+      $stderr = out_channel
+      if @original_action.to_s == "import_from_git"
+        begin
+        fl = Fastlane::FastFile.new
+        fl.runner = Runner.new
+        path = fl.import_from_git(url: args.first[:url], branch: 'HEAD', return_file: true)
+
+        actions_path = File.join(path, 'actions')
+        Fastlane::Actions.load_external_actions(actions_path) if File.directory?(actions_path)
+
+        fl_parser = FastfileParser.new(content: File.read("#{path}/fastlane/Fastfile"), filepath: @dirname, name: "Imported at #{@line_number}", change_dir: false, platforms: @platforms)
+        fl_parser.analyze
+        # lines.merge!(fl_parser.lines)
+        fl_parser.lines.each do |l|
+          lines << l
+        end
+      rescue
+      end
+      end
+
+      has_platform = true
+      if @platforms && @platforms.length > 0
+        @platforms.each do |pl|
+          if a.respond_to?(:is_supported?)
+            has_platform = a.is_supported?(pl.to_sym) unless has_platform
+          end
+        end
+        return return_data unless has_platform
+      end
+
       options_avail = a.available_options
       return return_data if options_avail.nil?
 
       # Validate Options
-      begin
-        config = FastlaneCore::Configuration.new(options_avail, args.first)
-        return_data[:configuration] = config
-      rescue => ex
-        return_data[:error] = ex.message
-        lines << { state: :error, line: @line_number, msg: "'#{@original_action}'  failed with:  `#{ex.message}`" }
+      if options_avail.length > 0 && options_avail.first.kind_of?(FastlaneCore::ConfigItem)
+        begin
+          config = FastlaneCore::Configuration.new(options_avail, args.first)
+          return_data[:configuration] = config
+        rescue => ex
+          return_data[:error] = ex.message
+          lines << { state: :error, line: @line_number, msg: "'#{@original_action}'  failed with:  `#{ex.message}`" }
+        end
       end
 
       # get bad options
@@ -72,6 +106,7 @@ module Fastlane
 
       # get deprecated and sensitive's
       options_avail.each do |o|
+        next unless o.kind_of?(FastlaneCore::ConfigItem)
         if o.sensitive
           self.class.secrets << args.first[o.key.to_sym].to_s if args.first[o.key.to_sym] && !self.class.secrets.include?(args.first[o.key.to_sym].to_s)
           UI.important("AX - #{@original_action.to_sym}: #{@action_vars.inspect}") if $verbose
@@ -82,12 +117,10 @@ module Fastlane
         if o.deprecated && args.first[o.key.to_sym]
           lines << { state: :deprecated, line: @line_number, msg: "Use of deprecated option - '#{o.key}' - `#{o.deprecated}`" }
         end
-
-        # reenabled output
-        $stdout = STDOUT
-        $stderr = STDERR
       end
-
+      # reenabled output
+      $stdout = STDOUT
+      $stderr = STDERR
       return_data
     end
 
@@ -99,7 +132,7 @@ module Fastlane
     end
 
     def dummy
-      FastlaneCore::FastfileParser.new("")
+      "aa"
     end
 
     def method_missing(sym, *args, &block)
@@ -108,8 +141,25 @@ module Fastlane
       dummy
     end
 
-    def initialize(filename)
-      @ast = parse(filename)
+    def initialize(content: nil, filepath: nil, name: "Fastfile", change_dir: true, platforms: [])
+      @filename = name
+      @platforms = platforms
+      @change_dir = change_dir
+
+      @dirname = File.dirname(filepath)
+      # find the path above the "fastlane/"
+      if @dirname == "fastlane"
+        @dirname = "."
+      else
+        @dirname = File.dirname(File.expand_path(filepath)).sub(%r{/fastlane$}, "")
+      end
+      unless filepath =~ %r{/}
+        @dirname = "."
+      end
+      if File.directory?(filepath)
+        @dirname = filepath
+      end
+      @ast = parse(content)
     rescue
       return nil
     end
@@ -153,12 +203,19 @@ module Fastlane
         if l[:state] == :info
           emoji = "ℹ️"
         end
-        table_rows << [emoji, level, linenr, wrap_string(status, 200)]
+        table_rows << [emoji, level, linenr.to_s, wrap_string(status, 100)]
       end
+
       if table_rows.length <= 0
         return nil
       end
-      table = Terminal::Table.new title: "Fastfile Validation Result".green, headings: ["#", "State", "Line#", "Notice"], rows: table_rows
+
+      table = Terminal::Table.new(title: "Fastfile Validation Result (#{@dirname})".green, headings: ["#", "State", "File/Line#", "Notice"]) do |t|
+        table_rows.each do |e|
+          t << e
+          t << :separator
+        end
+      end
       return table
     end
 
@@ -194,7 +251,7 @@ module Fastlane
         next unless child.class.to_s == "Parser::AST::Node"
 
         if (child.type.to_s == "send") and (child.children[0].to_s == "" && child.children[1].to_s == "lane")
-          @line_number = child.loc.expression.line
+          @line_number = "#{@filename}:#{child.loc.expression.line}"
           lane_name = child.children[2].children.first
           lanes << lane_name
           if Fastlane::Actions.action_class_ref(lane_name)
@@ -204,7 +261,7 @@ module Fastlane
         if (child.type.to_s == "send") and (child.children[0].to_s == "" && (Fastlane::Actions.action_class_ref(child.children[1].to_s) || find_alias(child.children[1].to_s)))
           src_code = child.loc.expression.source
           src_code.sub!(child.children[1].to_s, "fake_action")
-          @line_number =  child.loc.expression.line
+          @line_number = "#{@filename}:#{child.loc.expression.line}"
 
           # matches = src_code.gsub!(/#\{.*\}/) do |sym|
           #  self.class.secrets << sym if !self.class.secrets.include?(sym)
@@ -224,12 +281,15 @@ module Fastlane
           '
           UI.important(src_code) if $verbose
           begin
-            result = eval(dropper + src_code) # rubocop:disable Lint/Eval
+            Dir.chdir(@dirname) do
+              UI.important "CHDIR to: #{@dirname}" if $verbose
+              result = eval(dropper + src_code) # rubocop:disable Lint/Eval
+              actions << { action: @original_action, result: result, line: @line_number }
+            end
           rescue => ex
             UI.important("PARSE ERROR") if $verbose
             UI.important("Exception: #{ex}") if $verbose
           end
-          actions << { action: @original_action, result: result, line: @line_number }
         else
           recursive_analyze(child)
         end
