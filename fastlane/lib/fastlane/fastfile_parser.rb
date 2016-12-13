@@ -132,7 +132,7 @@ module Fastlane
     end
 
     def dummy
-      "aa"
+      FastlaneCore::FastfileParser.new
     end
 
     def method_missing(sym, *args, &block)
@@ -213,6 +213,7 @@ module Fastlane
       table = Terminal::Table.new(title: "Fastfile Validation Result (#{@dirname})".green, headings: ["#", "State", "File/Line#", "Notice"]) do |t|
         table_rows.each do |e|
           t << e
+
           t << :separator
         end
       end
@@ -255,7 +256,7 @@ module Fastlane
           lane_name = child.children[2].children.first
           lanes << lane_name
           if Fastlane::Actions.action_class_ref(lane_name)
-            lines << { state: :error, line: @line_number, msg: "Name of the lane `#{lane_name}` already taken by action `#{lane_name}`" }
+            lines << { state: :info, line: @line_number, msg: "Name of the lane `#{lane_name}` already taken by action `#{lane_name}`" }
           end
         end
         if (child.type.to_s == "send") and (child.children[0].to_s == "" && (Fastlane::Actions.action_class_ref(child.children[1].to_s) || find_alias(child.children[1].to_s)))
