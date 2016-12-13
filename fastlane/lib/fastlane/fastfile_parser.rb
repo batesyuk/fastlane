@@ -179,7 +179,7 @@ module Fastlane
           dist = 0
         elsif dist == max
           dist = 0
-          chars << "\n".white
+          chars << "\n"
         end
       end
       chars = chars[0..-2] if chars.last == "\n"
@@ -189,21 +189,21 @@ module Fastlane
     def make_table
       #
       table_rows = []
-      lines.each do |l|
-        status = l[:msg].yellow
-        linenr = l[:line].to_s.yellow
+      lines.sort_by { |k| k[:state] }.reverse.each do |l|
+        status = l[:msg]
+        linenr = l[:line].to_s
         level = l[:state].to_s.yellow
         emoji = "⚠️"
         if l[:state] == :error
-          status = l[:msg].red
+          status = l[:msg]
           level = l[:state].to_s.red
-          linenr = l[:line].to_s.red
+          linenr = l[:line].to_s
           emoji = "❌"
         end
         if l[:state] == :info
           emoji = "ℹ️"
         end
-        table_rows << [emoji, level + " ".white, linenr.to_s + " ".white, wrap_string(status, 100) + " ".white]
+        table_rows << [emoji, level + " ".white, linenr.to_s + " ".white, wrap_string(status, 100)]
       end
 
       if table_rows.length <= 0
