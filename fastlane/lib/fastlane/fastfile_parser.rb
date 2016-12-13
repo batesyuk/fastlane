@@ -179,7 +179,7 @@ module Fastlane
           dist = 0
         elsif dist == max
           dist = 0
-          chars << "\n"
+          chars << "\n".white
         end
       end
       chars = chars[0..-2] if chars.last == "\n"
@@ -203,7 +203,7 @@ module Fastlane
         if l[:state] == :info
           emoji = "ℹ️"
         end
-        table_rows << [emoji, level, linenr.to_s, wrap_string(status, 100)]
+        table_rows << [emoji, level + " ".white, linenr.to_s + " ".white, wrap_string(status, 100) + " ".white]
       end
 
       if table_rows.length <= 0
