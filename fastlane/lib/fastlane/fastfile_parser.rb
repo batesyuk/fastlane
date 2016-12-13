@@ -43,7 +43,6 @@ module Fastlane
       self.class.secrets.each do |s|
         rc.gsub!(s, "#" * s.length)
       end
-      pp self.class.secrets
       rc
     end
 
