@@ -58,7 +58,7 @@ module Fastlane
         begin
         fl = Fastlane::FastFile.new
         fl.runner = Runner.new
-        path = fl.import_from_git(url: args.first[:url], branch: 'HEAD', return_file: true)
+        path = fl.import_from_git(url: args.first[:url], branch: args.first[:branch] || "HEAD", return_file: true)
 
         actions_path = File.join(path, 'actions')
         Fastlane::Actions.load_external_actions(actions_path) if File.directory?(actions_path)
@@ -73,14 +73,21 @@ module Fastlane
       end
       end
 
-      has_platform = true
       if @platforms && @platforms.length > 0
+        has_platform = false
         @platforms.each do |pl|
-          if a.respond_to?(:is_supported?)
-            has_platform = a.is_supported?(pl.to_sym) unless has_platform
+          next unless a.respond_to?(:is_supported?)
+          has_platform = a.is_supported?(pl.to_sym)
+          if has_platform
+            break
           end
         end
-        return return_data unless has_platform
+
+        unless has_platform
+          $stdout = STDOUT
+          $stderr = STDERR
+          return return_data
+        end
       end
 
       options_avail = a.available_options
